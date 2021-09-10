@@ -6,6 +6,7 @@
 // This is where scripts' loading functions should be declared:
 void AddSC_account_commandscript();
 void AddSC_achievement_commandscript();
+void AddSC_anticheat_commandscript();
 void AddSC_arena_commandscript();
 void AddSC_ban_commandscript();
 void AddSC_bf_commandscript();
@@ -48,6 +49,7 @@ void AddCommandsScripts()
 {
     AddSC_account_commandscript();
     AddSC_achievement_commandscript();
+    AddSC_anticheat_commandscript();
     AddSC_arena_commandscript();
     AddSC_ban_commandscript();
     AddSC_bf_commandscript();

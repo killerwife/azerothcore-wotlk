@@ -41,6 +41,7 @@
 #include "QueryHolder.h"
 #include "StringConvert.h"
 #include "Tokenize.h"
+#include "Anticheat/Anticheat.hpp"
 
 #ifdef ELUNA
 #include "LuaEngine.h"
@@ -228,7 +229,7 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
 
     data.put<uint8>(0, num);
 
-    SendPacket(&data);
+    m_anticheat->SendCharEnum(std::move(data));
 }
 
 void WorldSession::HandleCharEnumOpcode(WorldPacket& /*recvData*/)

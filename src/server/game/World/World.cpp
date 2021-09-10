@@ -70,8 +70,6 @@
 #include "VMapFactory.h"
 #include "VMapManager2.h"
 #include "Vehicle.h"
-#include "Warden.h"
-#include "WardenCheckMgr.h"
 #include "WaypointMovementGenerator.h"
 #include "WeatherMgr.h"
 #include "WhoListCache.h"
@@ -2000,13 +1998,6 @@ void World::SetInitialWorldSettings()
 
     LOG_INFO("server.loading", "Loading Transports...");
     sTransportMgr->SpawnContinentTransports();
-
-    ///- Initialize Warden
-    LOG_INFO("server.loading", "Loading Warden Checks..." );
-    sWardenCheckMgr->LoadWardenChecks();
-
-    LOG_INFO("server.loading", "Loading Warden Action Overrides..." );
-    sWardenCheckMgr->LoadWardenOverrides();
 
     LOG_INFO("server.loading", "Deleting expired bans...");
     LoginDatabase.Execute("DELETE FROM ip_banned WHERE unbandate <= UNIX_TIMESTAMP() AND unbandate<>bandate");      // One-time query

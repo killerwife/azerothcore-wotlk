@@ -31,12 +31,11 @@
 #include "SocialMgr.h"
 #include "Transport.h"
 #include "Vehicle.h"
-#include "WardenMac.h"
-#include "WardenWin.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSocket.h"
 #include <zlib.h>
+#include "Anticheat/Anticheat.hpp"
 
 #ifdef ELUNA
 #include "LuaEngine.h"
@@ -123,7 +122,9 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
     _calendarEventCreationCooldown(0),
     _timeSyncClockDeltaQueue(6),
     _timeSyncClockDelta(0),
-    _pendingTimeSyncRequests()
+    _pendingTimeSyncRequests(),
+    m_anticheat(nullptr),
+    m_lastAnticheatUpdate(0)
 {
     memset(m_Tutorials, 0, sizeof(m_Tutorials));
 
@@ -287,6 +288,13 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     if (sWorld->getBoolConfig(CONFIG_CLOSE_IDLE_CONNECTIONS) && IsConnectionIdle() && m_Socket)
         m_Socket->CloseSocket();
 
+    if (m_Socket && m_Socket->IsOpen() && m_anticheat)
+    {
+        auto const now = getMSTime();
+        m_anticheat->Update(getMSTimeDiff(m_lastAnticheatUpdate, now));
+        m_lastAnticheatUpdate = now;
+    }
+
     if (updater.ProcessUnsafe())
         UpdateTimeOutTime(diff);
 
@@ -386,6 +394,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         catch (ByteBufferException const&)
         {
             LOG_ERROR("network", "WorldSession::Update ByteBufferException occured while parsing a packet (opcode: %u) from client %s, accountid=%i. Skipped packet.", packet->GetOpcode(), GetRemoteAddress().c_str(), GetAccountId());
+            m_anticheat->RecordCheat(CHEAT_ACTION_INFO_LOG, "Anticrash", "ByteBufferException");
             if (sLog->ShouldLog("network", LogLevel::LOG_LEVEL_DEBUG))
             {
                 LOG_DEBUG("network", "Dumping error causing packet:");
@@ -431,11 +440,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     //logout procedure should happen only in World::UpdateSessions() method!!!
     if (updater.ProcessUnsafe())
     {
-        if (m_Socket && m_Socket->IsOpen() && _warden)
-        {
-            _warden->Update(diff);
-        }
-
         if (ShouldLogOut(currentTime) && !m_playerLoading)
         {
             LogoutPlayer(true);
@@ -443,9 +447,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
         if (m_Socket && !m_Socket->IsOpen())
         {
-            if (GetPlayer() && _warden)
-                _warden->Update(diff);
-
             m_Socket = nullptr;
         }
 
@@ -1195,6 +1196,7 @@ void WorldSession::SetPlayer(Player* player)
     _player = player;
     if (_player)
         m_GUIDLow = _player->GetGUID().GetCounter();
+    m_anticheat->NewPlayer();
 }
 
 void WorldSession::ProcessQueryCallbacks()
@@ -1212,21 +1214,6 @@ TransactionCallback& WorldSession::AddTransactionCallback(TransactionCallback&& 
 SQLQueryHolderCallback& WorldSession::AddQueryHolderCallback(SQLQueryHolderCallback&& callback)
 {
     return _queryHolderProcessor.AddCallback(std::move(callback));
-}
-
-void WorldSession::InitWarden(SessionKey const& k, std::string const& os)
-{
-    if (os == "Win")
-    {
-        _warden = std::make_unique<WardenWin>();
-        _warden->Init(this, k);
-    }
-    else if (os == "OSX")
-    {
-        // Disabled as it is causing the client to crash
-        // _warden = new WardenMac();
-        // _warden->Init(this, k);
-    }
 }
 
 bool WorldSession::DosProtection::EvaluateOpcode(WorldPacket& p, time_t time) const
@@ -1553,4 +1540,14 @@ void WorldSession::SendTimeSync()
     // Schedule next sync in 10 sec (except for the 2 first packets, which are spaced by only 5s)
     _timeSyncTimer = _timeSyncNextCounter == 0 ? 5000 : 10000;
     _timeSyncNextCounter++;
+}
+
+void WorldSession::InitializeAnticheat(const BigNumber& K)
+{
+    m_anticheat = std::move(sAnticheatLib->NewSession(this, K));
+}
+
+void WorldSession::HandleWardenDataOpcode(WorldPacket& recv_data)
+{
+    m_anticheat->WardenPacket(recv_data);
 }

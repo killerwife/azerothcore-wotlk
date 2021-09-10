@@ -19,6 +19,7 @@
 #include "ScriptMgr.h"
 #include "World.h"
 #include "WorldSession.h"
+#include "Anticheat/Anticheat.hpp"
 #include <memory>
 
 using boost::asio::ip::tcp;
@@ -591,16 +592,19 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<AuthSession> authSes
 
     sScriptMgr->OnLastIpUpdate(account.Id, address);
 
+    std::string name = authSession->Account;
     _worldSession = new WorldSession(account.Id, std::move(authSession->Account), shared_from_this(), account.Security,
         account.Expansion, account.MuteTime, account.Locale, account.Recruiter, account.IsRectuiter, account.Security ? true : false, account.TotalTime);
 
-    _worldSession->ReadAddonsInfo(authSession->AddonInfo);
-
-    // Initialize Warden system only if it is enabled by config
-    if (wardenActive)
+    // when false, the client sent invalid addon data.  kick!
+    WorldPacket addonPacket;
+    if (!_worldSession->GetAnticheat()->ReadAddonInfo(&authSession->AddonInfo, addonPacket))
     {
-        _worldSession->InitWarden(account.SessionKey, account.OS);
+        LOG_INFO("network", "WorldSocket::HandleAuthSession: Account %s (id %u) IP %s sent bad addon info.  Kicking.", name.c_str(), account.Id, address.c_str());
+        return;
     }
+    else
+        SendPacket(addonPacket);
 
     sWorld->AddSession(_worldSession);
 

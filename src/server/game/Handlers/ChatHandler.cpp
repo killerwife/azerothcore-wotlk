@@ -23,7 +23,6 @@
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "Util.h"
-#include "Warden.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
@@ -267,12 +266,6 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             msg = recvData.ReadCString(lang != LANG_ADDON);
             ignoreChecks = true;
             break;
-    }
-
-    // Our Warden module also uses SendAddonMessage as a way to communicate Lua check results to the server, see if this is that
-    if (type == CHAT_MSG_GUILD && lang == LANG_ADDON && _warden && _warden->ProcessLuaCheckResponse(msg))
-    {
-        return;
     }
 
     // pussywizard:

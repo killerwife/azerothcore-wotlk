@@ -22,6 +22,7 @@
 #include "Packet.h"
 #include "SharedDefines.h"
 #include "World.h"
+#include "BigNumber.h"
 #include <utility>
 #include <map>
 
@@ -41,6 +42,7 @@ class Warden;
 class WorldPacket;
 class WorldSocket;
 class AsynchPetSummon;
+class SessionAnticheatInterface;
 struct AreaTableEntry;
 struct AuctionEntry;
 struct DeclinedName;
@@ -274,8 +276,6 @@ public:
     void SetTotalTime(uint32 TotalTime) { m_total_time = TotalTime; }
     uint32 GetTotalTime() const { return m_total_time; }
 
-    void InitWarden(SessionKey const&, std::string const& os);
-
     /// Session in auth.queue currently
     void SetInQueue(bool state) { m_inQueue = state; }
 
@@ -424,6 +424,9 @@ public:
     // Time Synchronisation
     void ResetTimeSync();
     void SendTimeSync();
+
+    void InitializeAnticheat(const BigNumber& K);
+    SessionAnticheatInterface* GetAnticheat() const { return m_anticheat.get(); }
 public:                                                 // opcodes handlers
     void Handle_NULL(WorldPacket& null);                // not used
     void Handle_EarlyProccess(WorldPacket& recvPacket); // just mark packets processed in WorldSocket::OnRead
@@ -1047,8 +1050,9 @@ private:
 
     typedef std::list<AddonInfo> AddonsList;
 
-    // Warden
-    std::unique_ptr<Warden> _warden;                    // Remains nullptr if Warden system is not enabled by config
+    // Anticheat
+    std::unique_ptr<SessionAnticheatInterface> m_anticheat;
+    uint32                                     m_lastAnticheatUpdate;
 
     time_t _logoutTime;
     bool m_inQueue;                                     // session wait in auth.queue
