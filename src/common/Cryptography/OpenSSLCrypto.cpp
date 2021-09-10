@@ -7,6 +7,7 @@
 #include <OpenSSLCrypto.h>
 
 #if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1010000fL
+#include <openssl/crypto.h>
 #include <vector>
 #include <thread>
 #include <mutex>
