@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2017-2020 namreeb (legal@namreeb.org)
  *
  * This is private software and may not be shared under any circumstances,
@@ -10,16 +10,15 @@
 #include "../config.hpp"
 
 #include "Common.h"
-#include "Entities/Player.h"
+#include "Player.h"
 #include "WorldPacket.h"
 #include "Server/WorldSession.h"
 #include "World/World.h"
 #include "Log.h"
-#include "Server/Opcodes.h"
+#include "Opcodes.h"
 #include "ByteBuffer.h"
 #include "Database/DatabaseEnv.h"
-#include "Policies/Singleton.h"
-#include "Auth/BigNumber.h"
+#include "BigNumber.h"
 #include "warden.hpp"
 #include "WardenModuleMgr.hpp"
 #include "Util.h"
@@ -41,11 +40,11 @@ using SessionAnticheat = NamreebAnticheat::SessionAnticheat;
 
 void Warden::LoadScriptedScans()
 {
-    auto const start = sWardenScanMgr.Count();
+    auto const start = sWardenScanMgr->Count();
 
     WardenWin::LoadScriptedScans();
 
-    sLog.outBasic(">> %lu scripted Warden scans loaded from anticheat module", uint64(sWardenScanMgr.Count() - start));
+    sLog.outBasic(">> %lu scripted Warden scans loaded from anticheat module", uint64(sWardenScanMgr->Count() - start));
 }
 
 Warden::Warden(WorldSession *session, const WardenModule *module, const BigNumber &K, SessionAnticheatInterface *anticheat) :
@@ -55,7 +54,7 @@ Warden::Warden(WorldSession *session, const WardenModule *module, const BigNumbe
     ASSERT(!!_module);
     ASSERT(!!_anticheat);
 
-    auto const kBytes = K.AsByteArray(0);
+    auto const kBytes = K.ToByteVector(0);
 
     SHA1Randx WK(kBytes.data(), kBytes.size());
 
@@ -169,7 +168,7 @@ void Warden::SendModuleToClient()
 
 std::vector<std::shared_ptr<const Scan>> Warden::SelectScans(ScanFlags flags) const
 {
-    return std::move(sWardenScanMgr.GetRandomScans(static_cast<ScanFlags>(flags | GetScanFlags())));
+    return std::move(sWardenScanMgr->GetRandomScans(static_cast<ScanFlags>(flags | GetScanFlags())));
 }
 
 void Warden::EnqueueScans(std::vector<std::shared_ptr<const Scan>> &&scans)
@@ -204,7 +203,7 @@ void Warden::RequestScans(std::vector<std::shared_ptr<const Scan>> &&scans)
     {
         // too many or too big? keep the current scan, as well as all following it, in the queue, and halt
         if (request + (*i)->requestSize > MaxRequest || reply + (*i)->replySize > MaxReply ||
-            _pendingScans.size() >= sAnticheatConfig.GetWardenScanCount())
+            _pendingScans.size() >= sAnticheatConfig->GetWardenScanCount())
         {
             _enqueuedScans = std::move(std::vector<std::shared_ptr<const Scan>>(i, _enqueuedScans.end()));
             queueUpdated = true;
@@ -295,17 +294,17 @@ void Warden::SendPacket(const ByteBuffer &buff)
     // creating side-effects for this function
     EncryptData(const_cast<uint8 *>(pkt.contents()), pkt.wpos());
 
-    _session->SendPacket(pkt);
+    _session->SendPacket(&pkt);
 }
 
 void Warden::DecryptData(uint8* buffer, size_t size)
 {
-    _inputCrypto.UpdateData(size, buffer);
+    _inputCrypto.UpdateData(buffer, size);
 }
 
 void Warden::EncryptData(uint8* buffer, size_t size)
 {
-    _outputCrypto.UpdateData(size, buffer);
+    _outputCrypto.UpdateData(buffer, size);
 }
 
 void Warden::BeginTimeoutClock()
@@ -325,7 +324,7 @@ void Warden::StopTimeoutClock()
 
 void Warden::BeginScanClock()
 {
-    _scanClock = WorldTimer::getMSTime() + 1000 * sAnticheatConfig.GetWardenScanFrequency();
+    _scanClock = getMSTime() + 1000 * sAnticheatConfig->GetWardenScanFrequency();
 }
 
 void Warden::StopScanClock()
@@ -460,7 +459,7 @@ void Warden::HandlePacket(WorldPacket& recvData)
 
 void Warden::Update(uint32 diff)
 {
-    if (!!_timeoutClock && WorldTimer::getMSTime() > _timeoutClock)
+    if (!!_timeoutClock && getMSTime() > _timeoutClock)
     {
         sLog.outBasic("WARDEN: Account %u ip %s timeout", _session->GetAccountId(), _session->GetRemoteAddress().c_str());
         _session->KickPlayer();
@@ -473,7 +472,7 @@ void Warden::Update(uint32 diff)
         if (!_enqueuedScans.empty())
             RequestScans({});
         // otherwise, if the scan clock is running and has expired, request randomly selected scans
-        else if (!!_scanClock && WorldTimer::getMSTime() > _scanClock)
+        else if (!!_scanClock && getMSTime() > _scanClock)
         {
             auto const inWorld = _session->GetPlayer() ? _session->GetPlayer()->IsInWorld() : false;
 

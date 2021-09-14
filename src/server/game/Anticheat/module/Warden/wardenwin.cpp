@@ -14,14 +14,14 @@
 #include "World/World.h"
 #include "../config.hpp"
 
-#include "Entities/Unit.h"
+#include "Unit.h"
 #include "Chat/Chat.h"
 #include "Server/WorldSession.h"
-#include "Auth/BigNumber.h"
-#include "Auth/HMACSHA1.h"
+#include "BigNumber.h"
+#include "HMAC.h"
 #include "ByteBuffer.h"
 #include "Database/DatabaseEnv.h"
-#include "Entities/Player.h"
+#include "Player.h"
 #include "Log.h"
 
 #include <string>

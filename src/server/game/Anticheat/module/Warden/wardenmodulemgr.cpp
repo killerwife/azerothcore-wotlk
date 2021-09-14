@@ -38,7 +38,7 @@ namespace
 
 WardenModuleMgr::WardenModuleMgr()
 {
-    auto const moduleDir = sAnticheatConfig.GetWardenModuleDirectory();
+    auto const moduleDir = sAnticheatConfig->GetWardenModuleDirectory();
     auto const modules = GetModuleNames(moduleDir);
 
     for (auto const &mod : modules)
@@ -61,7 +61,7 @@ WardenModuleMgr::WardenModuleMgr()
         }
     }
 
-    sLog.outBasic(">> %lu Windows Warden modules and %lu Mac Warden modules loaded", uint64(_winModules.size()), uint64(_macModules.size()));
+    LOG_INFO("warden", ">> %lu Windows Warden modules and %lu Mac Warden modules loaded", uint64(_winModules.size()), uint64(_macModules.size()));
 
     if (_winModules.empty() && _macModules.empty())
         throw std::runtime_error("Failed to locate Warden modules");

@@ -403,6 +403,8 @@ public:
     void SetOS(ClientOSType os) { m_clientOS = os; }
     uint32 GetGameBuild() const { return m_gameBuild; }
     void SetGameBuild(uint32 version) { m_gameBuild = version; }
+    uint32 GetAccountMaxLevel() const { return m_accountMaxLevel; }
+    void SetAccountMaxLevel(uint32 level) { m_accountMaxLevel = level; }
 
     std::atomic<time_t> m_timeOutTime;
     void UpdateTimeOutTime(uint32 diff)
@@ -1066,6 +1068,7 @@ private:
     uint32                                     m_gameBuild;
     std::unique_ptr<SessionAnticheatInterface> m_anticheat;
     uint32                                     m_lastAnticheatUpdate;
+    uint32                                     m_accountMaxLevel;
 
     time_t _logoutTime;
     bool m_inQueue;                                     // session wait in auth.queue

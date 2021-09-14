@@ -9,8 +9,8 @@
 #include "WardenModuleMgr.hpp"
 #include "WardenScanMgr.hpp"
 #include "Server/WorldSession.h"
-#include "Auth/BigNumber.h"
-#include "Auth/Sha1.h"
+#include "BigNumber.h"
+#include "Sha1.h"
 #include "World/World.h"
 #include "../config.hpp"
 #include "Log.h"
@@ -28,7 +28,7 @@ void WardenMac::LoadScriptedScans()
 }
 
 WardenMac::WardenMac(WorldSession *session, const BigNumber &K, SessionAnticheatInterface *anticheat)
-    : _fingerprintSaved(false), Warden(session, sWardenModuleMgr.GetMacModule(), K, anticheat)
+    : _fingerprintSaved(false), Warden(session, sWardenModuleMgr->GetMacModule(), K, anticheat)
 {
     std::stringstream hash;
 
@@ -40,7 +40,7 @@ WardenMac::WardenMac(WorldSession *session, const BigNumber &K, SessionAnticheat
 
     static constexpr uint32 magic = 0xFEEDFACE;
 
-    Sha1Hash sha1;
+    Acore::Crypto::Sha1Hash sha1;
     sha1.UpdateData(_hashString);
     sha1.UpdateData(reinterpret_cast<const uint8 *>(&magic), sizeof(magic));
     sha1.Finalize();
@@ -83,7 +83,7 @@ void WardenMac::Update(uint32 diff)
         // at this point if we have the character enum packet, it is okay to send
         if (!_charEnum.empty())
         {
-            _session->SendPacket(_charEnum);
+            _session->SendPacket(&_charEnum);
             _charEnum.clear();
         }
     }
@@ -93,7 +93,7 @@ void WardenMac::SetCharEnumPacket(WorldPacket &&packet)
 {
     // if we have already recorded system information, send the packet immediately.  otherwise delay
     if (_initialized)
-        _session->SendPacket(packet);
+        _session->SendPacket(&packet);
     else
         _charEnum = std::move(packet);
 }
@@ -102,7 +102,7 @@ uint32 WardenMac::GetScanFlags() const
 {
     uint32 ret = ScanFlags::MacAllBuild;
 
-    if (_session->GetAccountMaxLevel() >= sAnticheatConfig.GetWardenMinimumAdvancedLevel())
+    if (_session->GetAccountMaxLevel() >= sAnticheatConfig->GetWardenMinimumAdvancedLevel())
         ret |= ScanFlags::AdvancedScan;
 
     return ret;

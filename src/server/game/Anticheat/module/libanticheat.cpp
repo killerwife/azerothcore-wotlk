@@ -950,7 +950,7 @@ bool SessionAnticheat::Movement(MovementInfo &mi, const WorldPacket &packet)
         auto const mover = _session->GetPlayer()->GetMover();
 
         if (mover->GetTypeId() == TYPEID_PLAYER)
-            _movementData->OnTransport(reinterpret_cast<Player *>(mover), mi.GetTransportGuid());
+            _movementData->OnTransport(reinterpret_cast<Player *>(mover), mi.transport.guid);
     }
 
     return false;
@@ -1067,8 +1067,8 @@ void SessionAnticheat::RecordCheatInternal(CheatType cheat, const char *format, 
     if (_session != nullptr)
     {
         // ACCOUNT FLAGS
-        if (_session->GetAccountFlags() & ACCOUNT_FLAG_HIDDEN)
-            return;
+        //if (_session->GetAccountFlags() & ACCOUNT_FLAG_HIDDEN)
+        //    return;
     }
 
     ++_cheatOccuranceTotal[cheat];
@@ -1077,7 +1077,7 @@ void SessionAnticheat::RecordCheatInternal(CheatType cheat, const char *format, 
     uint32 actionMask;
 
     // when false, take no action
-    if (!sAnticheatConfig.CheckResponse(cheat, _cheatOccuranceTick[cheat], _cheatOccuranceTotal[cheat], actionMask))
+    if (!sAnticheatConfig->CheckResponse(cheat, _cheatOccuranceTick[cheat], _cheatOccuranceTotal[cheat], actionMask))
         return;
 
     auto constexpr activeActionMask = CHEAT_ACTION_KICK | CHEAT_ACTION_BAN_ACCOUNT | CHEAT_ACTION_BAN_IP | CHEAT_ACTION_SILENCE;
@@ -1087,7 +1087,7 @@ void SessionAnticheat::RecordCheatInternal(CheatType cheat, const char *format, 
     // too low level for warden non-logging ("active") actions?  remove them
     if (cheat == CHEAT_TYPE_WARDEN &&
         !(actionMask & CHEAT_ACTION_PROMPT_LOG) &&
-        _session->GetAccountMaxLevel() < sAnticheatConfig.GetWardenMinimumLevel())
+        _session->GetAccountMaxLevel() < sAnticheatConfig->GetWardenMinimumLevel())
             actionMask &= ~activeActionMask;
 
     std::string comment("");
@@ -1116,7 +1116,7 @@ void SessionAnticheat::RecordCheatInternal(CheatType cheat, const char *format, 
         actionMask |= CHEAT_ACTION_INFO_LOG;
 
     // TODO: delay notification until end of current anticheat tick so tick occurance can be included in the notification message
-    RecordCheat(actionMask, sAnticheatConfig.GetDetectorName(cheat), comment.c_str());
+    RecordCheat(actionMask, sAnticheatConfig->GetDetectorName(cheat), comment.c_str());
 }
 
 void SessionAnticheat::CleanupFingerprintHistory() const
