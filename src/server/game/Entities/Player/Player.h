@@ -2248,6 +2248,7 @@ public:
     void SetClientControl(Unit* target, bool allowMove, bool packetOnly = false);
 
     void SetMover(Unit* target);
+    Unit* GetMover() { return m_mover; }
 
     void SetSeer(WorldObject* target) { m_seer = target; }
     void SetViewpoint(WorldObject* target, bool apply);

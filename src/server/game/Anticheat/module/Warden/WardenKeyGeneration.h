@@ -61,7 +61,7 @@ private:
         taken = 0;
     }
 
-    Sha1Hash sh;
+    Acore::Crypto::Sha1Hash sh;
     size_t taken;
     uint8 o0[20],o1[20],o2[20];
 };

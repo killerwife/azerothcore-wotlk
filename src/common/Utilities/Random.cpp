@@ -12,7 +12,7 @@
 static thread_local std::unique_ptr<SFMTRand> sfmtRand;
 static RandomEngine engine;
 
-static SFMTRand* GetRng()
+SFMTRand* GetRng()
 {
     if (!sfmtRand)
     {

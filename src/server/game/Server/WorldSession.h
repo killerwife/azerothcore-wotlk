@@ -89,6 +89,13 @@ struct AccountData
     std::string Data;
 };
 
+enum ClientOSType
+{
+    CLIENT_OS_UNKNOWN,
+    CLIENT_OS_WIN,
+    CLIENT_OS_MAC
+};
+
 enum PartyOperation
 {
     PARTY_OP_INVITE = 0,
@@ -392,6 +399,10 @@ public:
 
     uint32 GetLatency() const { return m_latency; }
     void SetLatency(uint32 latency) { m_latency = latency; }
+    ClientOSType GetOS() const { return m_clientOS; }
+    void SetOS(ClientOSType os) { m_clientOS = os; }
+    uint32 GetGameBuild() const { return m_gameBuild; }
+    void SetGameBuild(uint32 version) { m_gameBuild = version; }
 
     std::atomic<time_t> m_timeOutTime;
     void UpdateTimeOutTime(uint32 diff)
@@ -1051,6 +1062,8 @@ private:
     typedef std::list<AddonInfo> AddonsList;
 
     // Anticheat
+    ClientOSType                               m_clientOS;
+    uint32                                     m_gameBuild;
     std::unique_ptr<SessionAnticheatInterface> m_anticheat;
     uint32                                     m_lastAnticheatUpdate;
 

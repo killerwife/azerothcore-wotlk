@@ -16,9 +16,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "Auth/Sha1.h"
-#include "Auth/BigNumber.h"
+#include "Sha1.h"
+#include "BigNumber.h"
 #include <stdarg.h>
+
+namespace Acore::Crypto
+{
 
 Sha1Hash::Sha1Hash()
 {
@@ -42,7 +45,7 @@ void Sha1Hash::UpdateData(const std::vector<uint8>& data)
 
 void Sha1Hash::UpdateData(const std::string& str)
 {
-    UpdateData((uint8 const*)str.c_str(), str.length());
+    UpdateData((uint8 const*) str.c_str(), str.length());
 }
 
 void Sha1Hash::UpdateBigNumbers(BigNumber* bn0, ...)
@@ -53,7 +56,7 @@ void Sha1Hash::UpdateBigNumbers(BigNumber* bn0, ...)
     BigNumber* bn = bn0;
     while (bn)
     {
-        UpdateData(bn->AsByteArray());
+        UpdateData(bn->ToByteVector());
         bn = va_arg(v, BigNumber*);
     }
     va_end(v);
@@ -68,3 +71,5 @@ void Sha1Hash::Finalize(void)
 {
     SHA1_Final(mDigest, &mC);
 }
+
+} // namespace Acore::Crypto

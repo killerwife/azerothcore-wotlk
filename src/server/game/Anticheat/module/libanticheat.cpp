@@ -272,7 +272,7 @@ void AnticheatLib::OfferExtrapolationData(
 
     _extrapPoints.insert(errorDistance, { start, theirEnd, extrapEnd, speed1, speed2, errorDistance });
 
-    if (_extrapDebugTimer < WorldTimer::getMSTime())
+    if (_extrapDebugTimer < getMSTime())
     {
         _extrapDebugActive = false;
         _extrapDebugTimer = 0;
@@ -281,20 +281,20 @@ void AnticheatLib::OfferExtrapolationData(
 
         for (auto const &i : _extrapPoints)
         {
-            str << "Start: (" << i.start.pos.x << ", " << i.start.pos.y << ", " << i.start.pos.z
-                << ") o: " << i.start.pos.o << " pitch: " << i.start.s_pitch << " flags: 0x"
+            str << "Start: (" << i.start.pos.GetPositionX() << ", " << i.start.pos.GetPositionY() << ", " << i.start.pos.GetPositionZ()
+                << ") o: " << i.start.pos.GetOrientation() << " pitch: " << i.start.pitch << " flags: 0x"
                 << std::hex << i.start.moveFlags << std::dec << " Speed 1: " << i.speed1 << " Speed 2: " << i.speed2
                 << " Client time: " << i.start.ctime << " Server time: " << i.start.stime << "\n"
-                << "Their end: (" << i.theirEnd.pos.x << ", " << i.theirEnd.pos.y << ", " << i.theirEnd.pos.z
-                << ") o: " << i.theirEnd.pos.o << " pitch: " << i.theirEnd.s_pitch << " flags: 0x"
+                << "Their end: (" << i.theirEnd.pos.GetPositionX() << ", " << i.theirEnd.pos.GetPositionY() << ", " << i.theirEnd.pos.GetPositionZ()
+                << ") o: " << i.theirEnd.pos.GetOrientation() << " pitch: " << i.theirEnd.pitch << " flags: 0x"
                 << std::hex << i.theirEnd.moveFlags << std::dec
                 << " Client time: " << i.theirEnd.ctime << " Server time: " << i.theirEnd.stime << "\n"
-                << "Extrapolated end position: (" << i.extrapEnd.x << ", " << i.extrapEnd.y << ", " << i.extrapEnd.z
-                << ") o: " << i.extrapEnd.o << "\n"
+                << "Extrapolated end position: (" << i.extrapEnd.GetPositionX() << ", " << i.extrapEnd.GetPositionY() << ", " << i.extrapEnd.GetPositionZ()
+                << ") o: " << i.extrapEnd.GetOrientation() << "\n"
                 << "Error distance: " << i.errorDistance << "\n";
         }
 
-        sLog.outBasic("Extrapolation debug window has ended.  Highest errors:\n%s", str.str().c_str());
+        LOG_INFO("Anticheat", "Extrapolation debug window has ended.  Highest errors:\n%s", str.str().c_str());
 
         _extrapPoints.clear();
     }
@@ -666,7 +666,7 @@ bool AnticheatLib::ChatCommand(ChatHandler *handler, const std::string &origArgs
 SessionAnticheat::SessionAnticheat(WorldSession *session, const BigNumber &K) :
     _session(session), _warden(CreateWarden(session, K, this)), _inWorld(false),_fingerprint(0), _tickTimer(0),
     _cheatsReported(0), _kickTimer(0), _banTimer(0), _banAccount(false), _banIP(false), _worldEnterTime(0),
-    _antispam(sAntispamMgr.GetSession(session->GetAccountId()))
+    _antispam(sAntispamMgr->GetSession(session->GetAccountId()))
 {
     memset(_cheatOccuranceTick, 0, sizeof(_cheatOccuranceTick));
     memset(_cheatOccuranceTotal, 0, sizeof(_cheatOccuranceTotal));
@@ -681,7 +681,7 @@ SessionAnticheat::~SessionAnticheat()
     // this way, if the session reconnects within the configured amount of time, we can restore their statistics rather than reset them.
     if (_antispam)
     {
-        sAntispamMgr.CacheSession(_antispam);
+        sAntispamMgr->CacheSession(_antispam);
         _antispam.reset();
     }
 
@@ -710,7 +710,7 @@ SessionAnticheat::~SessionAnticheat()
 void SessionAnticheat::EnterWorld()
 {
     _inWorld = true;
-    _worldEnterTime = WorldTimer::getMSTime();
+    _worldEnterTime = getMSTime();
     _movementData->HandleEnterWorld();
 }
 
@@ -718,7 +718,7 @@ void SessionAnticheat::BeginKickTimer()
 {
     // if the kick or ban timers are already running, don't restart this, otherwise repeated hacks means they'll be online forever!
     if (!_kickTimer && !_banTimer)
-        _kickTimer = sAnticheatConfig.GetKickDelay();
+        _kickTimer = sAnticheatConfig->GetKickDelay();
 }
 
 void SessionAnticheat::BeginBanTimer(bool account, bool ip)
@@ -729,7 +729,7 @@ void SessionAnticheat::BeginBanTimer(bool account, bool ip)
 
     _banAccount = account;
     _banIP = ip;
-    _banTimer = sAnticheatConfig.GetBanDelay();
+    _banTimer = sAnticheatConfig->GetBanDelay();
 }
 
 void SessionAnticheat::Update(uint32 diff)
@@ -762,7 +762,7 @@ void SessionAnticheat::Update(uint32 diff)
     }
 
     // if the anticheat is disabled, do nothing (except enforcement of previously scheduled actions, above)
-    if (!sAnticheatConfig.EnableAnticheat())
+    if (!sAnticheatConfig->EnableAnticheat())
         return;
 
     _warden->Update(diff);
@@ -791,7 +791,7 @@ void SessionAnticheat::SendCharEnum(WorldPacket &&packet)
 
 bool SessionAnticheat::IsSilenced() const
 {
-    return sAntispamMgr.IsSilenced(_session);
+    return sAntispamMgr->IsSilenced(_session);
 }
 
 void SessionAnticheat::NewPlayer()
@@ -822,7 +822,7 @@ void SessionAnticheat::Disconnect()
     // now or in the future that some session teardown will trigger the anticheat and we will want to still have it up and running.
     if (_antispam)
     {
-        sAntispamMgr.CacheSession(_antispam);
+        sAntispamMgr->CacheSession(_antispam);
         _antispam.reset();
     }
 }
@@ -830,11 +830,11 @@ void SessionAnticheat::Disconnect()
 void SessionAnticheat::SendPlayerInfo(ChatHandler *handler) const
 {
     auto const includeFingerprint = !handler->GetSession() ||
-        static_cast<uint32>(handler->GetSession()->GetSecurity()) >= sAnticheatConfig.GetFingerprintLevel();
+        static_cast<uint32>(handler->GetSession()->GetSecurity()) >= sAnticheatConfig->GetFingerprintLevel();
 
     if (includeFingerprint)
         handler->PSendSysMessage("OS: %s Build: %u Fingerprint: 0x%x Local IP: %s",
-            _session->GetOS() == CLIENT_OS_WIN ? "Win" : "Mac", _session->GetGameBuild(), _fingerprint, _session->GetLocalAddress().c_str());
+            _session->GetOS() == CLIENT_OS_WIN ? "Win" : "Mac", _session->GetGameBuild(), _fingerprint, _session->GetRemoteAddress().c_str());
 
     _warden->SendPlayerInfo(handler, includeFingerprint);
 }
@@ -853,7 +853,7 @@ void SessionAnticheat::SendCheatInfo(ChatHandler *handler) const
 
     for (auto i = 0; i < CHEATS_COUNT; ++i)
         if (_cheatOccuranceTotal[i])
-            handler->PSendSysMessage("%2u x %s (cheat %u)", _cheatOccuranceTotal[i], sAnticheatConfig.GetDetectorName(static_cast<CheatType>(i)), i);
+            handler->PSendSysMessage("%2u x %s (cheat %u)", _cheatOccuranceTotal[i], sAnticheatConfig->GetDetectorName(static_cast<CheatType>(i)), i);
 
     handler->SendSysMessage("_____ Extrapolation");
     handler->PSendSysMessage("Over speed distance tick = %f", _movementData->overSpeedDistanceTick);
@@ -911,10 +911,10 @@ void SessionAnticheat::RecordCheat(uint32 actionMask, const char *detector, cons
         if (_session->GetSecurity() == SEC_PLAYER)
         {
             // ACCOUNT FLAGS
-            LoginDatabase.PExecute("UPDATE account SET flags = flags | 0x%x WHERE id = %u",
-                _session->GetAccountId(), ACCOUNT_FLAG_SILENCED);
+            //LoginDatabase.PExecute("UPDATE account SET flags = flags | 0x%x WHERE id = %u",
+            //    _session->GetAccountId(), ACCOUNT_FLAG_SILENCED);
 
-            _session->AddAccountFlag(ACCOUNT_FLAG_SILENCED);
+            //_session->AddAccountFlag(ACCOUNT_FLAG_SILENCED);
         }
     }
 
@@ -945,7 +945,7 @@ bool SessionAnticheat::Movement(MovementInfo &mi, const WorldPacket &packet)
         return true;
 
     // if the above checks do not object to the message, update some other status...
-    if (mi.HasMovementFlag(MOVEFLAG_ONTRANSPORT))
+    if (mi.HasMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
     {
         auto const mover = _session->GetPlayer()->GetMover();
 

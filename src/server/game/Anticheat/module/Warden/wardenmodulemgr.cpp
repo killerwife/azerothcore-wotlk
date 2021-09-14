@@ -9,8 +9,7 @@
 #include "WardenModule.hpp"
 #include "../config.hpp"
 
-#include "Platform/Define.h"
-#include "Policies/Singleton.h"
+#include "Define.h"
 #include "Util.h"
 #include "Log.h"
 
@@ -18,8 +17,6 @@
 #include <string>
 #include <fstream>
 #include <boost/filesystem.hpp>
-
-INSTANTIATE_SINGLETON_1(WardenModuleMgr);
 
 namespace
 {

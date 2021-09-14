@@ -123,6 +123,8 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
     _timeSyncClockDeltaQueue(6),
     _timeSyncClockDelta(0),
     _pendingTimeSyncRequests(),
+    m_clientOS(CLIENT_OS_UNKNOWN),
+    m_gameBuild(0),
     m_anticheat(nullptr),
     m_lastAnticheatUpdate(0)
 {

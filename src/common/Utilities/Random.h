@@ -10,6 +10,8 @@
 #include "Duration.h"
 #include <limits>
 
+class SFMTRand;
+
 /* Return a random number in the range min..max. */
 AC_COMMON_API int32 irand(int32 min, int32 max);
 
@@ -48,6 +50,8 @@ inline bool roll_chance_i(int chance)
 {
     return chance > irand(0, 99);
 }
+
+extern SFMTRand* GetRng();
 
 /*
 * Wrapper satisfying UniformRandomNumberGenerator concept for use in <random> algorithms

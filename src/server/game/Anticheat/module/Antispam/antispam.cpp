@@ -17,7 +17,7 @@
 #include "World/World.h"
 #include "Timer.h"
 #include "Database/DatabaseEnv.h"
-#include "Tools/Language.h"
+#include "Language.h"
 
 #include <string>
 #include <unordered_set>
@@ -51,11 +51,11 @@ namespace NamreebAnticheat
 {
 float Antispam::Rate() const
 {
-    auto const milliseconds = WorldTimer::getMSTime() - _creationTime;
+    auto const milliseconds = getMSTime() - _creationTime;
     auto const seconds = static_cast<float>(milliseconds) / IN_MILLISECONDS;
 
     // if they have not been online long enough, return zero
-    if (seconds < static_cast<float>(sAnticheatConfig.GetAntispamRateGracePeriod()))
+    if (seconds < static_cast<float>(sAnticheatConfig->GetAntispamRateGracePeriod()))
         return 0.f;
 
     return Total() / (seconds * MINUTE);
@@ -64,15 +64,15 @@ float Antispam::Rate() const
 void Antispam::Notify(const char *format, ...)
 {
     // if it is too soon, do nothing
-    if ((_lastNotification + sAnticheatConfig.GetAntispamBlacklistNotifyCooldown() * MINUTE * IN_MILLISECONDS) > WorldTimer::getMSTime())
+    if ((_lastNotification + sAnticheatConfig->GetAntispamBlacklistNotifyCooldown() * MINUTE * IN_MILLISECONDS) > WorldTimer::getMSTime())
         return;
 
-    _lastNotification = WorldTimer::getMSTime();
+    _lastNotification = getMSTime();
 
     auto const session = sWorld.FindSession(_account);
 
     // do not log or notify GMs if the account is already silenced
-    if (!!session && sAntispamMgr.IsSilenced(session))
+    if (!!session && sAntispamMgr->IsSilenced(session))
         return;
 
     char buffer[1024];
@@ -139,7 +139,7 @@ void Antispam::Silence(const char *format, ...)
     auto const session = sWorld.FindSession(_account);
 
     // do not log or notify GMs if the account is already silenced
-    if (!!session && sAntispamMgr.IsSilenced(session))
+    if (!!session && sAntispamMgr->IsSilenced(session))
         return;
 
     char buffer[1024];
@@ -155,9 +155,9 @@ void Antispam::Silence(const char *format, ...)
     if (!!session)
         message << " Player: " << session->GetPlayerName();
 
-    if (sAnticheatConfig.EnableAntispamSilence())
+    if (sAnticheatConfig->EnableAntispamSilence())
     {
-        sAntispamMgr.Silence(_account);
+        sAntispamMgr->Silence(_account);
         message << " (silenced)";
     }
 
@@ -208,7 +208,7 @@ void Antispam::Silence(const char *format, ...)
 }
 
 Antispam::Antispam(uint32 account) :
-    _account(account), _creationTime(WorldTimer::getMSTime()), _whisperCount(0), _sayCount(0), _yellCount(0),
+    _account(account), _creationTime(getMSTime()), _whisperCount(0), _sayCount(0), _yellCount(0),
     _channelCount(0), _mailCount(0), _channelInviteCount(0), _partyInviteCount(0), _blacklistCount(0), _lastNotification(0) {}
 
 std::string Antispam::GetInfo() const
@@ -216,7 +216,7 @@ std::string Antispam::GetInfo() const
     std::stringstream ret;
     std::lock_guard<std::mutex> guard(_mutex);
 
-    auto const age = WorldTimer::getMSTime() -_creationTime;
+    auto const age = getMSTime() -_creationTime;
 
     bool silenced = false;
 
@@ -226,13 +226,13 @@ std::string Antispam::GetInfo() const
             << "Online: " << age / IN_MILLISECONDS << " seconds Distance traveled: " << GetDistanceTraveled()
             << " Account level: " << session->GetAccountMaxLevel() << "\n";
 
-        silenced = sAntispamMgr.IsSilenced(session);
+        silenced = sAntispamMgr->IsSilenced(session);
     }
     else
     {
         ret << "Spam information for account " << _account << ":\n";
 
-        silenced = sAntispamMgr.IsSilenced(_account);
+        silenced = sAntispamMgr->IsSilenced(_account);
     }
 
     if (silenced)
@@ -340,7 +340,7 @@ void Antispam::NewMessage(const std::string &msg)
 {
     _pendingMessages.push_back(msg);
 
-    sAntispamMgr.ScheduleAnalysis(shared_from_this());
+    sAntispamMgr->ScheduleAnalysis(shared_from_this());
 }
 
 float Antispam::GetDistanceTraveled() const
@@ -355,8 +355,8 @@ float Antispam::GetDistanceTraveled() const
     if (!player)
         return 0.f;
 
-    auto const movementTimeout = sAnticheatConfig.GetAntispamRepetitionMovementTimeout() * IN_MILLISECONDS;
-    auto const lastMovement = WorldTimer::getMSTime() - player->m_movementInfo.ctime;
+    auto const movementTimeout = sAnticheatConfig->GetAntispamRepetitionMovementTimeout() * IN_MILLISECONDS;
+    auto const lastMovement = getMSTime() - player->m_movementInfo.ctime;
 
     if (lastMovement > movementTimeout)
         return 0.f;
@@ -385,10 +385,10 @@ uint32 Antispam::RepetitionScore() const
     }
 
     // if we don't have enough data, return zero
-    if (total < sAnticheatConfig.GetAntispamMinRepetitionMessages())
+    if (total < sAnticheatConfig->GetAntispamMinRepetitionMessages())
         return 0;
 
-    if (auto const distanceScale = sAnticheatConfig.GetAntispamRepetitionDistanceScale())
+    if (auto const distanceScale = sAnticheatConfig->GetAntispamRepetitionDistanceScale())
     {
         auto const distanceTraveled = GetDistanceTraveled();
 
@@ -397,9 +397,9 @@ uint32 Antispam::RepetitionScore() const
             score /= distanceTraveled * distanceScale;
     }
 
-    if (auto const timeScale = sAnticheatConfig.GetAntispamRepetitionTimeScale())
+    if (auto const timeScale = sAnticheatConfig->GetAntispamRepetitionTimeScale())
     {
-        auto const milliseconds = WorldTimer::getMSTime() - _creationTime;
+        auto const milliseconds = getMSTime() - _creationTime;
         auto const lifetime = static_cast<float>(milliseconds) / IN_MILLISECONDS;
 
         if (lifetime > 0)
@@ -412,7 +412,7 @@ uint32 Antispam::RepetitionScore() const
 void Antispam::Analyze()
 {
     // are they too high level to care about them?
-    if (GetAccountLevel(_account) > sAnticheatConfig.GetAntispamMaxLevel())
+    if (GetAccountLevel(_account) > sAnticheatConfig->GetAntispamMaxLevel())
         return;
 
     std::lock_guard<std::mutex> guard(_mutex);
@@ -425,7 +425,7 @@ void Antispam::Analyze()
         _recentMessages.push_back(m);
 
     // step 1: check for messages being sent out too fast
-    if (auto const maxRate = sAnticheatConfig.GetAntispamMaxRate())
+    if (auto const maxRate = sAnticheatConfig->GetAntispamMaxRate())
     {
         if (auto const rate = Rate())
         {
@@ -438,13 +438,13 @@ void Antispam::Analyze()
     }
 
     // step 2: see if too many recipients are unique
-    if (auto const maxUniquePercentage = sAnticheatConfig.GetAntispamMaxUniquePercentage())
+    if (auto const maxUniquePercentage = sAnticheatConfig->GetAntispamMaxUniquePercentage())
     {
         // whispers, mails and channel invites are the only message types we track which have specific targets
         auto const total = _whisperCount + _mailCount + _channelInviteCount + _partyInviteCount;
 
         // have they sent enough messages to be eligible for this step?
-        if (total > sAnticheatConfig.GetAntispamMinUniqueMessages())
+        if (total > sAnticheatConfig->GetAntispamMinUniqueMessages())
         {
             auto const unique = _whisperTargets.size() + _mailTargets.size() + _channelInviteTargets.size() + _partyInviteTargets.size();
             auto const percentage = (100.f * unique) / static_cast<float>(total);
@@ -462,7 +462,7 @@ void Antispam::Analyze()
     for (auto const &msg : messages)
     {
         std::string log;
-        auto const score = sAntispamMgr.CheckBlacklist(msg, log);
+        auto const score = sAntispamMgr->CheckBlacklist(msg, log);
 
         // if blacklisted entries were found, record them
         if (!!score)
@@ -482,7 +482,7 @@ void Antispam::Analyze()
             str << msg;
 
         std::string log;
-        auto const score = sAntispamMgr.CheckBlacklist(str.str(), log);
+        auto const score = sAntispamMgr->CheckBlacklist(str.str(), log);
 
         if (!!score)
         {
@@ -496,18 +496,18 @@ void Antispam::Analyze()
     if (oldBlacklistCount != _blacklistCount)
     {
         // if this is severe enough to silence them, do so
-        if (_blacklistCount > sAnticheatConfig.GetAntispamBlacklistSilence() && sAnticheatConfig.GetAntispamBlacklistSilence() > 0)
+        if (_blacklistCount > sAnticheatConfig->GetAntispamBlacklistSilence() && sAnticheatConfig->GetAntispamBlacklistSilence() > 0)
         {
-            auto const milliseconds = WorldTimer::getMSTime() - _creationTime;
+            auto const milliseconds = getMSTime() - _creationTime;
             auto const minutes = static_cast<float>(milliseconds) / (IN_MILLISECONDS * MINUTE);
 
             Silence("Encountered too many blacklisted entries.  %u in %u messages in %f minutes", _blacklistCount, Total(), minutes);
             return;
         }
         // otherwise, if it is severe enough to inform GMs, do so
-        else if (_blacklistCount > sAnticheatConfig.GetAntispamBlacklistNotify() && sAnticheatConfig.GetAntispamBlacklistNotify() > 0)
+        else if (_blacklistCount > sAnticheatConfig->GetAntispamBlacklistNotify() && sAnticheatConfig->GetAntispamBlacklistNotify() > 0)
         {
-            auto const milliseconds = WorldTimer::getMSTime() - _creationTime;
+            auto const milliseconds = getMSTime() - _creationTime;
             auto const minutes = static_cast<float>(milliseconds) / (IN_MILLISECONDS * MINUTE);
 
             Notify("Encountered too many blacklisted entries.  %u in %u messages in %f minutes", _blacklistCount, Total(), minutes);
@@ -526,7 +526,7 @@ void Antispam::Analyze()
             auto const distance = static_cast<uint32>(nam::damerau_levenshtein_distance(msg, u.second));
 
             // if these two messages are the same, increase the count
-            if (distance < sAnticheatConfig.GetAntispamUniquenessThreshold())
+            if (distance < sAnticheatConfig->GetAntispamUniquenessThreshold())
             {
                 ++u.first;
                 found = true;
@@ -544,13 +544,13 @@ void Antispam::Analyze()
     auto const score = RepetitionScore();
 
     // if this is severe enough to silence them, do so
-    if (score >= sAnticheatConfig.GetAntispamRepetitionSilence() && sAnticheatConfig.GetAntispamRepetitionSilence() > 0)
+    if (score >= sAnticheatConfig->GetAntispamRepetitionSilence() && sAnticheatConfig->GetAntispamRepetitionSilence() > 0)
     {
         Silence("Messages are too repetitive.  Score: %u", score);
         return;
     }
     // otherwise, if it is severe enough to inform GMs, do so
-    else if (score >= sAnticheatConfig.GetAntispamRepetitionNotify() && sAnticheatConfig.GetAntispamRepetitionNotify() > 0)
+    else if (score >= sAnticheatConfig->GetAntispamRepetitionNotify() && sAnticheatConfig->GetAntispamRepetitionNotify() > 0)
     {
         Notify("Messages are too repetitive.  Score: %u", score);
     }
